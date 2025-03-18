@@ -255,8 +255,6 @@ new_wlan_tx=0
   else
     wlan_rx_speed=$((new_wlan_rx - wlan_rx))
     wlan_tx_speed=$((new_wlan_tx - wlan_tx))
-    wlan_rx=$new_wlan_rx
-    wlan_tx=$new_wlan_tx
     # Check for negative values when an interface is restarted
     if [ $wlan_rx_speed -lt 0 ]; then
       wlan_rx_speed=0
@@ -265,6 +263,8 @@ new_wlan_tx=0
       wlan_tx_speed=0
     fi
   fi
+  wlan_rx=$new_wlan_rx
+  wlan_tx=$new_wlan_tx
 
 
   if [ "$ENABLE_ATTRIBUTES" = true ]; then
