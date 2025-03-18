@@ -189,7 +189,7 @@ publish_sensor_data() {
 "memory_usage": $(echo $memory | awk '{print $3/$2*100}'),
 EOF
 )
-
+# Get wired interfaces link status
   for iface in $wired_interfaces; do
     if [ -f /sys/class/net/$iface/speed ]; then
       speed=$(cat /sys/class/net/$iface/speed)
@@ -202,7 +202,7 @@ EOF
 )
     fi
   done
-
+# Calculate wired interfaces bandwidth
   i=0
   for iface in $bandwidth_wired_interfaces; do
     if [ -f /sys/class/net/$iface/statistics/rx_bytes ]; then
@@ -240,6 +240,7 @@ EOF
     fi
     i=$((i + 1))
   done
+# Calculate WLAN bandwidth
 new_wlan_rx=0
 new_wlan_tx=0
   for iface in $wlan_interfaces; do
@@ -248,15 +249,21 @@ new_wlan_tx=0
         new_wlan_tx=$((new_wlan_tx + $(cat /sys/class/net/$iface/statistics/tx_bytes)))
       fi
   done
-  wlan_rx_speed=$((new_wlan_rx - wlan_rx))
-  wlan_tx_speed=$((new_wlan_tx - wlan_tx))
-  wlan_rx=$new_wlan_rx
-  wlan_tx=$new_wlan_tx
-  if [ $wlan_rx_speed -lt 0 ]; then
+  if [ $wlan_rx -eq 0 ]; then
     wlan_rx_speed=0
-  fi
-  if [ $wlan_tx_speed -lt 0 ]; then
     wlan_tx_speed=0
+  else
+    wlan_rx_speed=$((new_wlan_rx - wlan_rx))
+    wlan_tx_speed=$((new_wlan_tx - wlan_tx))
+    wlan_rx=$new_wlan_rx
+    wlan_tx=$new_wlan_tx
+    # Check for negative values when an interface is restarted
+    if [ $wlan_rx_speed -lt 0 ]; then
+      wlan_rx_speed=0
+    fi
+    if [ $wlan_tx_speed -lt 0 ]; then
+      wlan_tx_speed=0
+    fi
   fi
 
 
