@@ -24,7 +24,8 @@ DISCOVERY_DEVICE_TOPIC_PREFIX="homeassistant/device/${DEVICE_UID}/config"
 MQTT_STATE_TOPIC_PREFIX="system_monitoring/${DEVICE_NAME}/state"
 
 # Get wired interfaces
-wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*|ext_net)$')
+# wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*|ext_net)$')
+wired_interfaces="wan lan1 lan2"
 bandwidth_wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*)$')
 wlan_interfaces=$(ls /sys/class/net | grep -E '^(phy.*)$')
 tx=""     # Create an empty string
