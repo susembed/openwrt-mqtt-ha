@@ -26,9 +26,11 @@ MQTT_STATE_TOPIC_PREFIX="system_monitoring/${DEVICE_NAME}/state"
 # Get wired interfaces
 wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*|ext_net)$')
 bandwidth_wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*)$')
+wlan_interfaces=$(ls /sys/class/net | grep -E '^(phy.*)$')
 tx=""     # Create an empty string
 rx=""
-
+wlan_tx=0
+wlan_rx=0
 # Get initial values for bandwidth calculation. These strings always have the same length as the number of bandwidth_wired_interfaces
 # Required restart of the script if the number of interfaces changes
 i=0
@@ -57,10 +59,10 @@ $wired_interfaces_config
   "icon":"mdi:ethernet",
   "expire_after": ${EXPIRE},
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-  "value_template":"{{ value_json.${iface}_attr.speed |float(0) > 0}}",
+  "value_template":"{{'ON' if (value_json.${iface}_attr.speed |float(0) > 0) else 'OFF' }}",
   "attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "attributes_template":"{{ value_json.${iface}_attr | tojson }}",
-  "entity_category":"connectivity",
+  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_link_status"
 },
 EOF
@@ -81,7 +83,7 @@ $bandwidth_wired_interfaces_config
   "unit_of_measurement":"Mbps",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "value_template":"{{ value_json.${iface}_rx_speed |float(0) / 1000}}",
-  "entity_category":"bandwidth",
+  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_rx"
 },
 "${DEVICE_UID}_${iface}_tx": {
@@ -92,7 +94,7 @@ $bandwidth_wired_interfaces_config
   "unit_of_measurement":"Mbps",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "value_template":"{{ value_json.${iface}_tx_speed |float(0) / 1000}}",
-  "entity_category":"bandwidth",
+  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_tx"
 },
 EOF
@@ -121,7 +123,7 @@ EOF
       "expire_after": ${EXPIRE},
       "unit_of_measurement":"%",
       "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-      "value_template":"{{ value_json.cpu_load|float(0) / $(cat /proc/cpuinfo | grep processor | wc -l)}}",
+      "value_template":"{{ value_json.cpu_load|float(0) * 100 / $(cat /proc/cpuinfo | grep processor | wc -l)}}",
       "json_attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
       "json_attributes_template": "{{ value_json.cpu_load_attr | tojson }}",
       "entity_category":"diagnostic",
@@ -142,6 +144,29 @@ EOF
     },
     $wired_interfaces_config
     $bandwidth_wired_interfaces_config
+    "{DEVICE_UID}_wlan_tx": {
+      "p": "sensor",
+      "name": "${DEVICE_NAME} WLAN Tx Bandwidth",
+      "icon":"mdi:upload",
+      "expire_after": ${EXPIRE},
+      "unit_of_measurement":"Mbps",
+      "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
+      "value_template":"{{ value_json.wlan_tx_speed |int(0) / 1000}}",
+      "entity_category":"diagnostic",
+      "unique_id":"${DEVICE_UID}_wlan_tx"
+
+    },
+    "{DEVICE_UID}_wlan_rx": {
+      "p": "sensor",
+      "name": "${DEVICE_NAME} WLAN Rx Bandwidth",
+      "icon":"mdi:download",
+      "expire_after": ${EXPIRE},
+      "unit_of_measurement":"Mbps",
+      "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
+      "value_template":"{{ value_json.wlan_rx_speed |int(0) / 1000}}",
+      "entity_category":"diagnostic",
+      "unique_id":"${DEVICE_UID}_wlan_rx"
+    }
   },
   "qos": 0
 }
@@ -208,17 +233,32 @@ EOF
 
       data_payload=$(cat <<EOF
 $data_payload
-"${iface}_rx": {
-  "speed": $(((rx_speed * 8) / $UPDATE_INTERVAL))
-},
-"${iface}_tx": {
-  "speed": $(((tx_speed * 8) / $UPDATE_INTERVAL))
-},
+"${iface}_rx_speed": $(((rx_speed * 8) /1000 / $UPDATE_INTERVAL)),
+"${iface}_tx_speed": $(((tx_speed * 8) /1000 / $UPDATE_INTERVAL)),
 EOF
 )
     fi
     i=$((i + 1))
   done
+new_wlan_rx=0
+new_wlan_tx=0
+  for iface in $wlan_interfaces; do
+    if [ -f /sys/class/net/$iface/statistics/rx_bytes ]; then
+        new_wlan_rx=$((new_wlan_rx + $(cat /sys/class/net/$iface/statistics/rx_bytes)))
+        new_wlan_tx=$((new_wlan_tx + $(cat /sys/class/net/$iface/statistics/tx_bytes)))
+      fi
+  done
+  wlan_rx_speed=$((new_wlan_rx - wlan_rx))
+  wlan_tx_speed=$((new_wlan_tx - wlan_tx))
+  wlan_rx=$new_wlan_rx
+  wlan_tx=$new_wlan_tx
+  if [ $wlan_rx_speed -lt 0 ]; then
+    wlan_rx_speed=0
+  fi
+  if [ $wlan_tx_speed -lt 0 ]; then
+    wlan_tx_speed=0
+  fi
+
 
   if [ "$ENABLE_ATTRIBUTES" = true ]; then
     data_payload=$(cat <<EOF
@@ -236,15 +276,19 @@ EOF
   else
     attrs=""
   fi
+  data_payload=$(cat <<EOF
+$data_payload
+$attrs
+"wlan_rx_speed": $(((wlan_rx_speed * 8) /1000 / $UPDATE_INTERVAL)),
+"wlan_tx_speed": $(((wlan_tx_speed * 8) /1000 / $UPDATE_INTERVAL))
+EOF
+)
 
-  # Remove trailing comma and close JSON
-  data_payload=$(echo "$data_payload" | sed 's/,$//')
   data_payload=$(cat <<EOF
 $data_payload
 }
 EOF
 )
-
   if [ "$DEBUG" = true ]; then
       echo "Sensor Data Payload:"
       echo "$data_payload"
