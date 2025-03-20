@@ -22,6 +22,7 @@ SYSTEM_BOARD=$(ubus call system board)
 DEVICE_NAME=$(echo $SYSTEM_BOARD | jsonfilter -e '@.hostname')
 DISCOVERY_DEVICE_TOPIC_PREFIX="homeassistant/device/${DEVICE_UID}/config"
 MQTT_STATE_TOPIC_PREFIX="system_monitoring/${DEVICE_NAME}/state"
+ONE_TIME_MQTT_STATE_TOPIC_PREFIX="system_monitoring/${DEVICE_NAME}/onetime-state"
 
 # Get wired interfaces
 # wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*|ext_net)$')
@@ -56,7 +57,7 @@ publish_device_discovery_message() {
 $wired_interfaces_config
 "${DEVICE_UID}_${iface}_link_status": {
   "p": "binary_sensor",
-  "name": "${DEVICE_NAME} ${iface} Link Status",
+  "name": "${iface} Link Status",
   "icon":"mdi:ethernet",
   "expire_after": ${EXPIRE},
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
@@ -78,7 +79,7 @@ EOF
 $bandwidth_wired_interfaces_config
 "${DEVICE_UID}_${iface}_rx": {
   "p": "sensor",
-  "name": "${DEVICE_NAME} ${iface} Rx Bandwidth",
+  "name": "${iface} Rx Bandwidth",
   "icon":"mdi:download",
   "expire_after": ${EXPIRE},
   "unit_of_measurement":"Mbps",
@@ -89,7 +90,7 @@ $bandwidth_wired_interfaces_config
 },
 "${DEVICE_UID}_${iface}_tx": {
   "p": "sensor",
-  "name": "${DEVICE_NAME} ${iface} Tx Bandwidth",
+  "name": "${iface} Tx Bandwidth",
   "icon":"mdi:upload",
   "expire_after": ${EXPIRE},
   "unit_of_measurement":"Mbps",
@@ -145,9 +146,9 @@ EOF
     },
     $wired_interfaces_config
     $bandwidth_wired_interfaces_config
-    "{DEVICE_UID}_wlan_tx": {
+    "${DEVICE_UID}_wlan_tx": {
       "p": "sensor",
-      "name": "${DEVICE_NAME} WLAN Tx Bandwidth",
+      "name": "WLAN Tx Bandwidth",
       "icon":"mdi:upload",
       "expire_after": ${EXPIRE},
       "unit_of_measurement":"Mbps",
@@ -157,9 +158,9 @@ EOF
       "unique_id":"${DEVICE_UID}_wlan_tx"
 
     },
-    "{DEVICE_UID}_wlan_rx": {
+    "${DEVICE_UID}_wlan_rx": {
       "p": "sensor",
-      "name": "${DEVICE_NAME} WLAN Rx Bandwidth",
+      "name": "WLAN Rx Bandwidth",
       "icon":"mdi:download",
       "expire_after": ${EXPIRE},
       "unit_of_measurement":"Mbps",
@@ -167,6 +168,15 @@ EOF
       "value_template":"{{ value_json.wlan_rx_speed |int(0) / 1000}}",
       "entity_category":"diagnostic",
       "unique_id":"${DEVICE_UID}_wlan_rx"
+    },
+    "${DEVICE_UID}_last_boot": {
+      "p": "sensor",
+      "name": "Last Boot",
+      "icon":"mdi:clock",
+      "state_topic":"${ONE_TIME_MQTT_STATE_TOPIC_PREFIX}",
+      "value_template":"{{now() - timedelta( seconds = value_json.uptime |int(0))}}",
+      "entity_category":"diagnostic",
+      "unique_id":"${DEVICE_UID}_last_boot"
     }
   },
   "qos": 0
@@ -304,8 +314,23 @@ EOF
       mosquitto_pub -h "$MQTT_BROKER" -p "$MQTT_PORT" -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "${MQTT_STATE_TOPIC_PREFIX}" -m "$data_payload"
   fi
 }
+publish_one_time_sensor_data() {
+  uptime=$(cat /proc/uptime | awk '{print $1}')
+  data_payload=$(cat <<EOF
+{"uptime": $uptime}
+EOF
+)
+  if [ "$DEBUG" = true ]; then
+    echo "One Time Sensor Data Payload:"
+    echo "$data_payload"
+  else
+    mosquitto_pub -h "$MQTT_BROKER" -p "$MQTT_PORT" -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "${ONE_TIME_MQTT_STATE_TOPIC_PREFIX}" -m "$data_payload"
+  fi
+
+}
 
 publish_device_discovery_message
+publish_one_time_sensor_data
 # Main loop
 while true; do
     publish_sensor_data
