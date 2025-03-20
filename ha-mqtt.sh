@@ -64,7 +64,6 @@ $wired_interfaces_config
   "value_template":"{{'ON' if (value_json.${iface}_attr.speed |float(0) > 0) else 'OFF' }}",
   "attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "attributes_template":"{{ value_json.${iface}_attr | tojson }}",
-  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_link_status"
 },
 EOF
@@ -85,7 +84,6 @@ $bandwidth_wired_interfaces_config
   "unit_of_measurement":"Mbps",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "value_template":"{{ value_json.${iface}_rx_speed |float(0) / 1000}}",
-  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_rx"
 },
 "${DEVICE_UID}_${iface}_tx": {
@@ -96,7 +94,6 @@ $bandwidth_wired_interfaces_config
   "unit_of_measurement":"Mbps",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "value_template":"{{ value_json.${iface}_tx_speed |float(0) / 1000}}",
-  "entity_category":"diagnostic",
   "unique_id":"${DEVICE_UID}_${iface}_tx"
 },
 EOF
@@ -128,7 +125,6 @@ EOF
       "value_template":"{{ value_json.cpu_load|float(0) * 100 / $(cat /proc/cpuinfo | grep processor | wc -l) |round(1)}}",
       "json_attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
       "json_attributes_template": "{{ value_json.cpu_load_attr | tojson }}",
-      "entity_category":"diagnostic",
       "unique_id":"${DEVICE_UID}_cpu_load"
     },
     "${DEVICE_UID}_memory_usage": {
@@ -141,7 +137,6 @@ EOF
       "value_template":"{{ value_json.memory_usage|float(0) |round(1)}}",
       "json_attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
       "json_attributes_template": "{{ value_json.memory_attr | tojson }}",
-      "entity_category":"diagnostic",
       "unique_id":"${DEVICE_UID}_memory_usage"
     },
     $wired_interfaces_config
@@ -154,7 +149,6 @@ EOF
       "unit_of_measurement":"Mbps",
       "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
       "value_template":"{{ value_json.wlan_tx_speed |int(0) / 1000}}",
-      "entity_category":"diagnostic",
       "unique_id":"${DEVICE_UID}_wlan_tx"
 
     },
@@ -166,7 +160,6 @@ EOF
       "unit_of_measurement":"Mbps",
       "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
       "value_template":"{{ value_json.wlan_rx_speed |int(0) / 1000}}",
-      "entity_category":"diagnostic",
       "unique_id":"${DEVICE_UID}_wlan_rx"
     },
     "${DEVICE_UID}_last_boot": {
@@ -175,7 +168,7 @@ EOF
       "icon":"mdi:clock",
       "state_topic":"${ONE_TIME_MQTT_STATE_TOPIC_PREFIX}",
       "value_template":"{{now() - timedelta( seconds = value_json.uptime |int(0))}}",
-      "entity_category":"diagnostic",
+      "device_class":"timestamp",
       "unique_id":"${DEVICE_UID}_last_boot"
     }
   },
