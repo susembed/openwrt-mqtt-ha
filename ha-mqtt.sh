@@ -27,20 +27,18 @@ ONE_TIME_MQTT_STATE_TOPIC_PREFIX="system_monitoring/${DEVICE_NAME}/onetime-state
 # Get wired interfaces
 # wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*|ext_net)$')
 wired_interfaces="wan lan1 lan2"
-bandwidth_wired_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*)$')
+# bandwidth_interfaces=$(ls /sys/class/net | grep -vE '^(lo|br-.*|eth0|phy.*)$')
+bandwidth_interfaces="wan lan1 lan2 ext_net"
 wlan_interfaces=$(ls /sys/class/net | grep -E '^(phy.*)$')
-tx=""     # Create an empty string
-rx=""
+
 wlan_tx=0
 wlan_rx=0
-# Get initial values for bandwidth calculation. These strings always have the same length as the number of bandwidth_wired_interfaces
+# Get initial values for bandwidth calculation. These strings always have the same length as the number of bandwidth_interfaces
 # Required restart of the script if the number of interfaces changes
-i=0
-for iface in $bandwidth_wired_interfaces; do
+for iface in $bandwidth_interfaces; do
     if [ -f /sys/class/net/$iface/statistics/tx_bytes ]; then
-        tx="$tx 0"
-        rx="$rx 0"
-        i=$((i + 1))
+        eval tx_$iface=0
+        eval rx_$iface=0
     fi
 done
 
@@ -71,11 +69,11 @@ EOF
     fi
   done
 
-  bandwidth_wired_interfaces_config=""
-  for iface in $bandwidth_wired_interfaces; do
+  bandwidth_interfaces_config=""
+  for iface in $bandwidth_interfaces; do
     if [ -f /sys/class/net/$iface/speed ]; then
-      bandwidth_wired_interfaces_config=$(cat <<EOF
-$bandwidth_wired_interfaces_config
+      bandwidth_interfaces_config=$(cat <<EOF
+$bandwidth_interfaces_config
 "${DEVICE_UID}_${iface}_rx": {
   "p": "sensor",
   "name": "${iface} Rx Bandwidth",
@@ -140,7 +138,7 @@ EOF
       "unique_id":"${DEVICE_UID}_memory_usage"
     },
     $wired_interfaces_config
-    $bandwidth_wired_interfaces_config
+    $bandwidth_interfaces_config
     "${DEVICE_UID}_wlan_tx": {
       "p": "sensor",
       "name": "WLAN Tx Bandwidth",
@@ -207,33 +205,30 @@ EOF
     fi
   done
 # Calculate wired interfaces bandwidth
-  i=0
-  for iface in $bandwidth_wired_interfaces; do
+  for iface in $bandwidth_interfaces; do
     if [ -f /sys/class/net/$iface/statistics/rx_bytes ]; then
-      rx_array=$(echo $rx | cut -d' ' -f$((i + 1)))
-      tx_array=$(echo $tx | cut -d' ' -f$((i + 1)))
-
-      if [ "$rx_array" -ne 0 ]; then
-        rx_speed=$(cat /sys/class/net/$iface/statistics/rx_bytes)
-        rx_speed=$((rx_speed - rx_array))
+      old_rx=$(eval echo \$rx_$iface)
+      if [ "$old_rx" -ne 0 ]; then
+        # rx_speed=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+        rx_speed=$(($(cat /sys/class/net/$iface/statistics/rx_bytes) - old_rx))
         if [ $rx_speed -lt 0 ]; then
           rx_speed=0
         fi
       else
         rx_speed=0
       fi
-      rx=$(echo $rx | sed "s/\b$rx_array\b/$(cat /sys/class/net/$iface/statistics/rx_bytes)/")
-
-      if [ "$tx_array" -ne 0 ]; then
-        tx_speed=$(cat /sys/class/net/$iface/statistics/tx_bytes)
-        tx_speed=$((tx_speed - tx_array))
+      eval rx_$iface=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+     
+      old_tx=$(eval echo \$tx_$iface)
+      if [ "$old_tx" -ne 0 ]; then
+        tx_speed=$(( $(cat /sys/class/net/$iface/statistics/tx_bytes) - $old_tx ))
         if [ $tx_speed -lt 0 ]; then
           tx_speed=0
         fi
       else
         tx_speed=0
       fi
-      tx=$(echo $tx | sed "s/\b$tx_array\b/$(cat /sys/class/net/$iface/statistics/tx_bytes)/")
+      eval tx_$iface=$(cat /sys/class/net/$iface/statistics/tx_bytes)
 
       data_payload=$(cat <<EOF
 $data_payload
@@ -242,7 +237,6 @@ $data_payload
 EOF
 )
     fi
-    i=$((i + 1))
   done
 # Calculate WLAN bandwidth
 new_wlan_rx=0
