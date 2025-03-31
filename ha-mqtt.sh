@@ -60,8 +60,8 @@ $wired_interfaces_config
   "expire_after": ${EXPIRE},
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
   "value_template":"{{'ON' if (value_json.${iface}_attr.speed |float(0) > 0) else 'OFF' }}",
-  "attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-  "attributes_template":"{{ value_json.${iface}_attr | tojson }}",
+  "json_attributes_topic":"${MQTT_STATE_TOPIC_PREFIX}",
+  "json_attributes_template":"{{ value_json.${iface}_attr | tojson }}",
   "unique_id":"${DEVICE_UID}_${iface}_link_status"
 },
 EOF
