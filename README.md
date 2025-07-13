@@ -4,12 +4,17 @@ Monitor system resource of OpenWrt router from Home Assistant over MQTT.
 Script runs on the router and push sensor's data to MQTT broker.
 
 Goal: a simple, light-weight, low-dependency script 
+
 Challenge: lack of resources (CPU, mem, disk), very limited `ash` shell enviroment
+
 ![Screenshot from 2025-04-10 00-17-56](https://github.com/user-attachments/assets/bf9b619a-68d0-484b-92b9-ce44f3c24f95)
+
 Tested on Xiaomi Routers: 3G v1 and 3G v2
+
 ### Requirements
 - MQTT broker
-- Home Assitant core with configured MQTT broker integration
+- Home Assitant core
+- MQTT broker
 ### Script dependencies
 - mosquitto-client-nossl package, can be installed with command: `opkg install mosquitto-client-nossl`. It's also may work with ssl if you install ssl mqtt package.
 ### How to use
