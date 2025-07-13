@@ -178,7 +178,7 @@ EOF
     echo "Device Discovery Payload:"
     echo "$payload"
   else
-    mosquitto_pub -h "$MQTT_BROKER" -p "$MQTT_PORT" -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "${DISCOVERY_DEVICE_TOPIC_PREFIX}" -r -m "$payload" -r
+    mosquitto_pub -h "$MQTT_BROKER" -p "$MQTT_PORT" -u "$MQTT_USER" -P "$MQTT_PASSWORD" -t "${DISCOVERY_DEVICE_TOPIC_PREFIX}" -m "$payload" -r
   fi
 }
 
