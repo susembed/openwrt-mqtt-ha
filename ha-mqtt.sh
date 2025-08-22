@@ -77,26 +77,26 @@ EOF
 $bandwidth_interfaces_config
 "${DEVICE_UID}_${iface}_rx": {
   "p": "sensor",
-  "name": "${iface} Rx Bandwidth",
+  "name": "${iface} Rx speed",
   "icon":"mdi:download",
   "expire_after": ${EXPIRE},
-  "unit_of_measurement":"B/s",
+  "unit_of_measurement":"kB/s",
   "device_class": "data_rate",
   "state_class": "measurement",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-  "value_template":"{{ value_json.${iface}_rx_speed |int(0) / 8}}",
+  "value_template":"{{ (value_json.${iface}_rx_speed |int(0) / 8)| int(0) }}",
   "unique_id":"${DEVICE_UID}_${iface}_rx"
 },
 "${DEVICE_UID}_${iface}_tx": {
   "p": "sensor",
-  "name": "${iface} Tx Bandwidth",
+  "name": "${iface} Tx speed",
   "icon":"mdi:upload",
   "expire_after": ${EXPIRE},
-  "unit_of_measurement":"B/s",
+  "unit_of_measurement":"kB/s",
   "device_class": "data_rate",
   "state_class": "measurement",
   "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-  "value_template":"{{ value_json.${iface}_tx_speed |float(0) / 8}}",
+  "value_template":"{{ (value_json.${iface}_tx_speed |int(0) / 8)| int(0) }}",
   "unique_id":"${DEVICE_UID}_${iface}_tx"
 },
 EOF
@@ -148,27 +148,27 @@ EOF
     $bandwidth_interfaces_config
     "${DEVICE_UID}_wlan_tx": {
       "p": "sensor",
-      "name": "WLAN Tx Bandwidth",
+      "name": "WLAN Tx speed",
       "icon":"mdi:upload",
       "expire_after": ${EXPIRE},
-      "unit_of_measurement":"B/s",
+      "unit_of_measurement":"kB/s",
       "device_class": "data_rate",
       "state_class": "measurement",
       "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-      "value_template":"{{ value_json.wlan_tx_speed |int(0) / 8}}",
+      "value_template":"{{ (value_json.wlan_tx_speed |int(0) / 8) | int(0) }}",
       "unique_id":"${DEVICE_UID}_wlan_tx"
 
     },
     "${DEVICE_UID}_wlan_rx": {
       "p": "sensor",
-      "name": "WLAN Rx Bandwidth",
+      "name": "WLAN Rx speed",
       "icon":"mdi:download",
       "expire_after": ${EXPIRE},
-      "unit_of_measurement":"B/s",
+      "unit_of_measurement":"kB/s",
       "device_class": "data_rate",
       "state_class": "measurement",
       "state_topic":"${MQTT_STATE_TOPIC_PREFIX}",
-      "value_template":"{{ value_json.wlan_rx_speed |int(0) / 8}}",
+      "value_template":"{{ (value_json.wlan_rx_speed |int(0) / 8) | int(0) }}",
       "unique_id":"${DEVICE_UID}_wlan_rx"
     },
     "${DEVICE_UID}_last_boot": {
